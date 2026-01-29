@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gCRC Price Checker</title>
+    
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .bg-gradient {
+            background: linear-gradient(135deg, #eef2ff 0%, #ffffff 50%, #faf5ff 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .icon-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 4rem;
+            height: 4rem;
+            background: linear-gradient(135deg, #6366f1 0%, #9333ea 100%);
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.125rem;
+            color: #6b7280;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: #eef2ff;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-icon-purple {
+            background: #f3e8ff;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .query-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: #eef2ff;
+            border-radius: 1rem;
+            border: 1px solid #c7d2fe;
+            margin-bottom: 1.5rem;
+        }
+        
+        .query-text {
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        
+        .query-label {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .query-date {
+            font-weight: 700;
+            color: #6366f1;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            border-radius: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #9333ea 100%);
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .results-box {
+            background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid #86efac;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .pulse-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .results-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #065f46;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .results-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+        
+        @media (min-width: 768px) {
+            .results-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .results-grid-full {
+                grid-column: 1 / -1;
+            }
+        }
+        
+        .result-item {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        
+        .result-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .result-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .result-sublabel {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+        
+        .info-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #eff6ff;
+            border-radius: 0.75rem;
+            border: 1px solid #bfdbfe;
+            margin-top: 1rem;
+        }
+        
+        .info-box-amber {
+            background: #fffbeb;
+            border-color: #fde68a;
+        }
+        
+        .info-text {
+            font-size: 0.875rem;
+            color: #1e3a8a;
+        }
+        
+        .info-text-amber {
+            font-size: 0.75rem;
+            color: #78350f;
+        }
+        
+        .info-link {
+            margin-left: 0.25rem;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+        
+        .info-link:hover {
+            color: #1e40af;
+        }
+        
+        .converter-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1rem;
+            height: 100%;
+        }
+        
+        .feature-box {
+            background: linear-gradient(135deg, #faf5ff 0%, #fce7f3 100%);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid #e9d5ff;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        
+        .feature-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: #9333ea;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .info-section {
+            margin-top: 2rem;
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .info-section-title {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .info-section-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .info-section-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .info-section-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .info-section-bold {
+            color: #111827;
+            font-weight: 600;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+        
+        .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 3px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        svg {
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // SVG Icons
+        const Calendar = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} fill="none" stroke={color} viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
+                <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2"/>
+                <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2"/>
+                <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2"/>
+            </svg>
+        );
+
+        const TrendingUp = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} fill="none" stroke={color} viewBox="0 0 24 24">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" strokeWidth="2"/>
+                <polyline points="17 6 23 6 23 12" strokeWidth="2"/>
+            </svg>
+        );
+
+        const Info = ({ size = 20, color = "currentColor" }) => (
+            <svg width={size} height={size} fill="none" stroke={color} viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <line x1="12" y1="16" x2="12" y2="12" strokeWidth="2"/>
+                <line x1="12" y1="8" x2="12.01" y2="8" strokeWidth="2"/>
+            </svg>
+        );
+
+        const ArrowLeftRight = ({ size = 20, color = "currentColor" }) => (
+            <svg width={size} height={size} fill="none" stroke={color} viewBox="0 0 24 24">
+                <path d="M8 3L4 7l4 4" strokeWidth="2"/>
+                <path d="M4 7h16" strokeWidth="2"/>
+                <path d="M16 21l4-4-4-4" strokeWidth="2"/>
+                <path d="M20 17H4" strokeWidth="2"/>
+            </svg>
+        );
+
+        const ExternalLink = ({ size = 16, color = "currentColor" }) => (
+            <svg width={size} height={size} fill="none" stroke={color} viewBox="0 0 24 24">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeWidth="2"/>
+                <polyline points="15 3 21 3 21 9" strokeWidth="2"/>
+                <line x1="10" y1="14" x2="21" y2="3" strokeWidth="2"/>
+            </svg>
+        );
+
+        const GCRCPriceChecker = () => {
+            const [loading, setLoading] = useState(false);
+            const [priceData, setPriceData] = useState(null);
+
+            const getSecondLastDayOfMonth = () => {
+                return new Date(2025, 11, 30);
+            };
+
+            const fetchGCRCPrice = async () => {
+                setLoading(true);
+                
+                try {
+                    const targetDate = getSecondLastDayOfMonth();
+                    setPriceData({
+                        price: '0.008541462630433629',
+                        price_demurrage: '0.012463898192171875',
+                        block_day: '2025-12-30 00:00',
+                        date: targetDate.toISOString().split('T')[0]
+                    });
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const openConverter = () => {
+                window.open('https://aboutcircles.github.io/CirclesTools/crcConverter.html', '_blank');
+            };
+
+            const targetDate = getSecondLastDayOfMonth();
+            const formattedTargetDate = targetDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            return (
+                <div className="bg-gradient">
+                    <div className="container">
+                        <div className="header">
+                            <div className="icon-circle">
+                                <TrendingUp size={32} color="white" />
+                            </div>
+                            <h1>gCRC Price Checker</h1>
+                            <p className="subtitle">
+                                Check the Circles (gCRC) token price and convert between values
+                            </p>
+                        </div>
+
+                        <div className="grid">
+                            {/* Price Checker Card */}
+                            <div className="card">
+                                <div className="card-header">
+                                    <div className="card-icon">
+                                        <TrendingUp size={20} color="#6366f1" />
+                                    </div>
+                                    <h2>Price Checker</h2>
+                                </div>
+                                
+                                <div className="query-box">
+                                    <Calendar size={24} color="#6366f1" />
+                                    <div>
+                                        <p className="query-label">Query Date</p>
+                                        <p className="query-text">
+                                            What is the gCRC price on <span className="query-date">{formattedTargetDate}</span>?
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button onClick={fetchGCRCPrice} disabled={loading} className="btn btn-primary">
+                                    {loading ? (
+                                        <>
+                                            <div className="spinner" />
+                                            Loading...
+                                        </>
+                                    ) : (
+                                        'Check Price'
+                                    )}
+                                </button>
+
+                                {priceData && (
+                                    <div>
+                                        <div className="results-box">
+                                            <div className="results-header">
+                                                <div className="pulse-dot" />
+                                                <span className="results-label">Results</span>
+                                            </div>
+                                            
+                                            <div className="results-grid">
+                                                <div className="result-item">
+                                                    <div className="result-label">Price (Static)</div>
+                                                    <div className="result-value">
+                                                        {parseFloat(priceData.price).toFixed(6)}
+                                                    </div>
+                                                    <div className="result-sublabel">Inflationary</div>
+                                                </div>
+
+                                                <div className="result-item">
+                                                    <div className="result-label">Price (Demurrage)</div>
+                                                    <div className="result-value">
+                                                        {parseFloat(priceData.price_demurrage).toFixed(6)}
+                                                    </div>
+                                                    <div className="result-sublabel">Time-based</div>
+                                                </div>
+
+                                                <div className="result-item results-grid-full">
+                                                    <div className="result-label">Block Day</div>
+                                                    <div className="result-value" style={{fontSize: '1rem'}}>
+                                                        {priceData.block_day}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="info-box">
+                                            <Info size={20} color="#2563eb" />
+                                            <p className="info-text">
+                                                Data updated via Dune Analytics. 
+                                                <a 
+                                                    href="https://dune.com/queries/6613696" 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="info-link"
+                                                >
+                                                    View source →
+                                                </a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Converter Card */}
+                            <div className="card">
+                                <div className="card-header">
+                                    <div className="card-icon card-icon-purple">
+                                        <ArrowLeftRight size={20} color="#9333ea" />
+                                    </div>
+                                    <h2>CRC Converter</h2>
+                                </div>
+
+                                <div className="converter-content">
+                                    <div className="feature-box">
+                                        <h3 className="feature-title">Convert Values</h3>
+                                        <p className="feature-desc">
+                                            Transform between static (inflationary) and demurraged CRC token values in real-time.
+                                        </p>
+                                        
+                                        <div className="feature-list">
+                                            <div className="feature-item">
+                                                <div className="feature-dot" />
+                                                <span>Static ↔ Demurraged</span>
+                                            </div>
+                                            <div className="feature-item">
+                                                <div className="feature-dot" />
+                                                <span>Real-time blockchain data</span>
+                                            </div>
+                                            <div className="feature-item">
+                                                <div className="feature-dot" />
+                                                <span>Accurate conversion</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button onClick={openConverter} className="btn btn-secondary">
+                                        <ArrowLeftRight size={20} color="white" />
+                                        Open Converter
+                                        <ExternalLink size={16} color="white" />
+                                    </button>
+
+                                    <div className="info-box info-box-amber">
+                                        <Info size={16} color="#d97706" />
+                                        <p className="info-text-amber">
+                                            Static tokens maintain value over time, while demurraged tokens decrease. 
+                                            <a 
+                                                href="https://aboutcircles.com/t/demurrage-and-time-circles/50" 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="info-link"
+                                                style={{color: '#78350f'}}
+                                            >
+                                                Learn more →
+                                            </a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Info Section */}
+                        <div className="info-section">
+                            <h3 className="info-section-title">
+                                <Info size={20} color="#6366f1" />
+                                Understanding Static vs Demurrage
+                            </h3>
+                            <div className="info-section-grid">
+                                <div className="info-section-text">
+                                    <span className="info-section-bold">Static (Inflationary):</span> These CRC tokens don't change their nominal value over time. They represent a fixed amount.
+                                </div>
+                                <div className="info-section-text">
+                                    <span className="info-section-bold">Demurraged:</span> These CRC tokens decrease in value over time due to the demurrage mechanism, encouraging circulation.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="footer">
+                            <p>gCRC price checker and converter for Circles Protocol</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GCRCPriceChecker />);
+    </script>
+</body>
+</html>
