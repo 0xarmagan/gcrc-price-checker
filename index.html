@@ -338,9 +338,9 @@
                         <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
                     </svg>
                     <div>
-                        <p class="query-label">Query Date</p>
+                        <p class="query-label">Query Period</p>
                         <p class="query-text">
-                            What is the gCRC price on <span class="query-date" id="queryDate">Loading...</span>?
+                            What is the average gCRC demurrage price for <span class="query-date" id="queryDate">Loading...</span>?
                         </p>
                     </div>
                 </div>
@@ -357,21 +357,10 @@
                         </div>
                         
                         <div class="results-grid">
-                            <div class="result-item">
-                                <div class="result-label">Price (Static)</div>
-                                <div class="result-value" id="priceStatic">0.008541</div>
-                                <div class="result-sublabel">Inflationary</div>
-                            </div>
-
-                            <div class="result-item">
-                                <div class="result-label">Price (Demurrage)</div>
-                                <div class="result-value" id="priceDemurrage">0.012464</div>
-                                <div class="result-sublabel">Time-based</div>
-                            </div>
-
                             <div class="result-item result-item-full">
-                                <div class="result-label">Block Day</div>
-                                <div class="result-value" style="font-size: 1rem" id="blockDay">2025-12-30 00:00</div>
+                                <div class="result-label">Average Demurrage gCRC Price</div>
+                                <div class="result-value" id="avgPriceDemurrage">0.012586</div>
+                                <div class="result-sublabel">Monthly average for <span id="monthInfo">current month</span></div>
                             </div>
                         </div>
                     </div>
@@ -384,7 +373,7 @@
                         </svg>
                         <p class="info-text">
                             Data updated via Dune Analytics. 
-                            <a href="https://dune.com/queries/6613696" target="_blank" rel="noopener noreferrer" class="info-link">
+                            <a href="https://dune.com/queries/6620740" target="_blank" rel="noopener noreferrer" class="info-link">
                                 View source →
                             </a>
                         </p>
@@ -410,8 +399,8 @@
                         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2"/>
                     </svg>
                     <p class="info-text-amber" style="font-size: 0.875rem;">
-                        <strong>For invoices, please use the demurrage gCRC price.</strong><br>
-                        Copy this value and add it to your invoice.
+                        <strong>For invoices, use the monthly average demurrage gCRC price.</strong><br>
+                        This represents the average price for the entire month. Copy this value and add it to your invoice.
                     </p>
                 </div>
             </div>
@@ -420,47 +409,37 @@
     </div>
 
     <script>
-        // Calculate second-to-last day of current month
-        function getSecondLastDayOfMonth() {
+        // Get current month
+        function getCurrentMonth() {
             const now = new Date();
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            const secondLastDay = new Date(lastDay);
-            secondLastDay.setDate(lastDay.getDate() - 1);
-            return secondLastDay;
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            return `${year}-${month}-01`;
         }
 
-        // Format date for display
-        function formatDateForDisplay(date) {
+        // Format month for display
+        function formatMonthForDisplay(monthString) {
+            const date = new Date(monthString);
             return date.toLocaleDateString('en-US', {
                 year: 'numeric',
-                month: 'long',
-                day: 'numeric'
+                month: 'long'
             });
         }
 
-        // Format date for query (YYYY-MM-DD)
-        function formatDateForQuery(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
         // Initialize
-        const targetDate = getSecondLastDayOfMonth();
-        const formattedDate = formatDateForQuery(targetDate);
+        const currentMonth = getCurrentMonth();
         
-        // Update query date in UI
-        document.getElementById('queryDate').textContent = formatDateForDisplay(targetDate);
+        // Update query month in UI
+        document.getElementById('queryDate').textContent = formatMonthForDisplay(currentMonth);
 
         // Elements
         const checkPriceBtn = document.getElementById('checkPriceBtn');
         const resultsContainer = document.getElementById('resultsContainer');
 
-        // Fetch price from Dune API
-        async function fetchGCRCPrice() {
-            const DUNE_API_KEY = 'dqHEpHvOICY5sqX2getzqScyGjRBxooA'; // Replace with your API key
-            const QUERY_ID = '6613696';
+        // Fetch average price from Dune API
+        async function fetchAveragePrice() {
+            const DUNE_API_KEY = 'dqHEpHvOICY5sqX2getzqScyGjRBxooA';
+            const QUERY_ID = '6620740'; // Updated query ID
             
             try {
                 const response = await fetch(
@@ -478,30 +457,28 @@
                 
                 const data = await response.json();
                 
-                // Find the row matching our target date
+                // Find the row matching current month
                 const result = data.result.rows.find(row => {
-                    const rowDate = row.block_day.split(' ')[0];
-                    return rowDate === formattedDate;
+                    const rowMonth = row.month.split(' ')[0];
+                    return rowMonth === currentMonth;
                 });
                 
                 if (result) {
                     return {
-                        price: result.price,
-                        price_demurrage: result.price_demurrage,
-                        block_day: result.block_day
+                        avg_price_demurrage: result.avg_price_demurrage,
+                        month: result.month
                     };
                 }
                 
                 // If no exact match found, use fallback data
-                throw new Error('No data found for this date');
+                throw new Error('No data found for this month');
                 
             } catch (error) {
                 console.error('Error fetching price:', error);
-                // Return fallback/demo data
+                // Return fallback/demo data for January 2026
                 return {
-                    price: '0.008541462630433629',
-                    price_demurrage: '0.012463898192171875',
-                    block_day: formattedDate + ' 00:00'
+                    avg_price_demurrage: '0.012585748431750499',
+                    month: currentMonth + ' 00:00'
                 };
             }
         }
@@ -513,13 +490,12 @@
             checkPriceBtn.disabled = true;
 
             try {
-                // Fetch price data
-                const priceData = await fetchGCRCPrice();
+                // Fetch average price data
+                const priceData = await fetchAveragePrice();
 
-                // Update values
-                document.getElementById('priceStatic').textContent = parseFloat(priceData.price).toFixed(6);
-                document.getElementById('priceDemurrage').textContent = parseFloat(priceData.price_demurrage).toFixed(6);
-                document.getElementById('blockDay').textContent = priceData.block_day;
+                // Update value
+                document.getElementById('avgPriceDemurrage').textContent = parseFloat(priceData.avg_price_demurrage).toFixed(6);
+                document.getElementById('monthInfo').textContent = formatMonthForDisplay(priceData.month);
 
                 // Show results
                 resultsContainer.classList.remove('hidden');
