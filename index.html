@@ -338,9 +338,9 @@
                         <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
                     </svg>
                     <div>
-                        <p class="query-label">Query Period</p>
+                        <p class="query-label">Query Date</p>
                         <p class="query-text">
-                            What is the average gCRC demurrage price for <span class="query-date" id="queryDate">Loading...</span>?
+                            What is the average gCRC demurrage price up to <span class="query-date" id="queryDate">Loading...</span>?
                         </p>
                     </div>
                 </div>
@@ -359,8 +359,8 @@
                         <div class="results-grid">
                             <div class="result-item result-item-full">
                                 <div class="result-label">Average Demurrage gCRC Price</div>
-                                <div class="result-value" id="avgPriceDemurrage">0.012586</div>
-                                <div class="result-sublabel">Monthly average for <span id="monthInfo">current month</span></div>
+                                <div class="result-value" id="avgPriceDemurrage">0.012684</div>
+                                <div class="result-sublabel">Average price up to <span id="monthInfo">current date</span></div>
                             </div>
                         </div>
                     </div>
@@ -373,7 +373,7 @@
                         </svg>
                         <p class="info-text">
                             Data updated via Dune Analytics. 
-                            <a href="https://dune.com/queries/6620740" target="_blank" rel="noopener noreferrer" class="info-link">
+                            <a href="https://dune.com/queries/6620648" target="_blank" rel="noopener noreferrer" class="info-link">
                                 View source →
                             </a>
                         </p>
@@ -399,8 +399,8 @@
                         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2"/>
                     </svg>
                     <p class="info-text-amber" style="font-size: 0.875rem;">
-                        <strong>For invoices, use the monthly average demurrage gCRC price.</strong><br>
-                        This represents the average price for the entire month. Copy this value and add it to your invoice.
+                        <strong>For invoices, use the average demurrage gCRC price.</strong><br>
+                        This represents the average price up to the current date. Copy this value and add it to your invoice.
                     </p>
                 </div>
             </div>
@@ -409,41 +409,71 @@
     </div>
 
     <script>
-        // Get current month
-        function getCurrentMonth() {
+        // Get current date in ISO format
+        function getCurrentDate() {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
-            return `${year}-${month}-01`;
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
-        // Format month for display
-        function formatMonthForDisplay(monthString) {
-            const date = new Date(monthString);
+        // Format date for display
+        function formatDateForDisplay(dateString) {
+            const date = new Date(dateString);
             return date.toLocaleDateString('en-US', {
                 year: 'numeric',
-                month: 'long'
+                month: 'long',
+                day: 'numeric'
             });
         }
 
         // Initialize
-        const currentMonth = getCurrentMonth();
+        const currentDate = getCurrentDate();
         
-        // Update query month in UI
-        document.getElementById('queryDate').textContent = formatMonthForDisplay(currentMonth);
+        // Update query date in UI
+        document.getElementById('queryDate').textContent = formatDateForDisplay(currentDate);
 
         // Elements
         const checkPriceBtn = document.getElementById('checkPriceBtn');
         const resultsContainer = document.getElementById('resultsContainer');
 
-        // Fetch average price from Dune API
+        // Fetch average price from Dune API with date parameter
         async function fetchAveragePrice() {
             const DUNE_API_KEY = 'dqHEpHvOICY5sqX2getzqScyGjRBxooA';
-            const QUERY_ID = '6620740'; // Updated query ID
+            const QUERY_ID = '6620648'; // Parameterized query
             
             try {
-                const response = await fetch(
-                    `https://api.dune.com/api/v1/query/${QUERY_ID}/results`,
+                // First, execute the query with the date parameter
+                const executeResponse = await fetch(
+                    `https://api.dune.com/api/v1/query/${QUERY_ID}/execute`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'X-Dune-API-Key': DUNE_API_KEY,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            query_parameters: {
+                                date: currentDate + ' 00:00:00'
+                            }
+                        })
+                    }
+                );
+                
+                if (!executeResponse.ok) {
+                    throw new Error('Query execution failed');
+                }
+                
+                const executeData = await executeResponse.json();
+                const executionId = executeData.execution_id;
+                
+                // Wait a bit for query to execute
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Get the results
+                const resultsResponse = await fetch(
+                    `https://api.dune.com/api/v1/execution/${executionId}/results`,
                     {
                         headers: {
                             'X-Dune-API-Key': DUNE_API_KEY
@@ -451,34 +481,29 @@
                     }
                 );
                 
-                if (!response.ok) {
-                    throw new Error('API call failed');
+                if (!resultsResponse.ok) {
+                    throw new Error('Failed to get results');
                 }
                 
-                const data = await response.json();
+                const data = await resultsResponse.json();
                 
-                // Find the row matching current month
-                const result = data.result.rows.find(row => {
-                    const rowMonth = row.month.split(' ')[0];
-                    return rowMonth === currentMonth;
-                });
-                
-                if (result) {
+                // Get the first row (should only be one row)
+                if (data.result && data.result.rows && data.result.rows.length > 0) {
+                    const result = data.result.rows[0];
                     return {
-                        avg_price_demurrage: result.avg_price_demurrage,
-                        month: result.month
+                        price_demurrage: result.price_demurrage,
+                        block_day: result.block_day
                     };
                 }
                 
-                // If no exact match found, use fallback data
-                throw new Error('No data found for this month');
+                throw new Error('No data returned');
                 
             } catch (error) {
                 console.error('Error fetching price:', error);
-                // Return fallback/demo data for January 2026
+                // Return fallback/demo data for January 30, 2026
                 return {
-                    avg_price_demurrage: '0.012585748431750499',
-                    month: currentMonth + ' 00:00'
+                    price_demurrage: '0.012684140846512395',
+                    block_day: currentDate
                 };
             }
         }
@@ -494,8 +519,8 @@
                 const priceData = await fetchAveragePrice();
 
                 // Update value
-                document.getElementById('avgPriceDemurrage').textContent = parseFloat(priceData.avg_price_demurrage).toFixed(6);
-                document.getElementById('monthInfo').textContent = formatMonthForDisplay(priceData.month);
+                document.getElementById('avgPriceDemurrage').textContent = parseFloat(priceData.price_demurrage).toFixed(6);
+                document.getElementById('monthInfo').textContent = formatDateForDisplay(priceData.block_day);
 
                 // Show results
                 resultsContainer.classList.remove('hidden');
