@@ -120,6 +120,30 @@
             color: #6366f1;
         }
         
+        .date-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 2px solid #c7d2fe;
+            border-radius: 0.75rem;
+            background: white;
+            color: #111827;
+            font-family: inherit;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .date-input:hover {
+            border-color: #a5b4fc;
+        }
+        
         .btn {
             width: 100%;
             padding: 1rem 1.5rem;
@@ -313,23 +337,13 @@
             </div>
             <h1>gCRC Price Checker</h1>
             <p class="subtitle">
-                Check the Circles (gCRC) token price and convert between values
+                Check the Circles (gCRC) token price
             </p>
         </div>
 
         <div class="grid">
             <!-- Price Checker Card -->
             <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <svg width="20" height="20" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" stroke-width="2"/>
-                            <polyline points="17 6 23 6 23 12" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <h2>Price Checker</h2>
-                </div>
-                
                 <div class="query-box">
                     <svg width="24" height="24" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
@@ -337,13 +351,15 @@
                         <line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/>
                         <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
                     </svg>
-                    <div>
-                        <p class="query-label">Query Date</p>
+                    <div style="flex: 1;">
+                        <p class="query-label">Select Date</p>
                         <p class="query-text">
-                            What is the average gCRC demurrage price up to <span class="query-date" id="queryDate">Loading...</span>?
+                            Choose a date to check the gCRC demurrage price
                         </p>
                     </div>
                 </div>
+
+                <input type="date" id="dateInput" class="date-input" />
 
                 <button id="checkPriceBtn" class="btn btn-primary">
                     Check Price
@@ -358,9 +374,9 @@
                         
                         <div class="results-grid">
                             <div class="result-item result-item-full">
-                                <div class="result-label">Average Demurrage gCRC Price</div>
+                                <div class="result-label">Demurrage gCRC Price</div>
                                 <div class="result-value" id="avgPriceDemurrage">0.012684</div>
-                                <div class="result-sublabel">Average price up to <span id="monthInfo">current date</span></div>
+                                <div class="result-sublabel">Price for <span id="monthInfo">selected date</span></div>
                             </div>
                         </div>
                     </div>
@@ -381,37 +397,15 @@
                 </div>
             </div>
 
-            <!-- Invoice Note Card -->
-            <div class="card" style="margin-top: 1.5rem;">
-                <div class="card-header">
-                    <div class="card-icon" style="background: #fef3c7;">
-                        <svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                            <line x1="12" y1="16" x2="12" y2="12" stroke-width="2"/>
-                            <line x1="12" y1="8" x2="12.01" y2="8" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <h2>Invoice Information</h2>
-                </div>
-
-                <div class="info-box" style="background: #fffbeb; border-color: #fde68a; margin-bottom: 0;">
-                    <svg width="20" height="20" fill="none" stroke="#d97706" viewBox="0 0 24 24">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2"/>
-                    </svg>
-                    <p class="info-text-amber" style="font-size: 0.875rem;">
-                        <strong>For invoices, use the average demurrage gCRC price.</strong><br>
-                        This represents the average price up to the current date. Copy this value and add it to your invoice.
-                    </p>
-                </div>
-            </div>
         </div>
 
     </div>
 
     <script>
-        // Get current date in ISO format
-        function getCurrentDate() {
+        // Get yesterday's date in ISO format (for max date)
+        function getYesterdayDate() {
             const now = new Date();
+            now.setDate(now.getDate() - 1);
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
@@ -420,26 +414,38 @@
 
         // Format date for display
         function formatDateForDisplay(dateString) {
-            const date = new Date(dateString);
+            const date = new Date(dateString + 'T00:00:00');
             return date.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
         }
+        
+        // Round to significant digits
+        function roundToSignificantDigits(num, sigDigits) {
+            if (num === 0) return 0;
+            const magnitude = Math.floor(Math.log10(Math.abs(num)));
+            const scale = Math.pow(10, magnitude - sigDigits + 1);
+            const rounded = Math.round(num / scale) * scale;
+            // Convert to string with appropriate precision to avoid floating point artifacts
+            return parseFloat(rounded.toPrecision(sigDigits));
+        }
 
         // Initialize
-        const currentDate = getCurrentDate();
+        const yesterdayDate = getYesterdayDate();
+        const dateInput = document.getElementById('dateInput');
         
-        // Update query date in UI
-        document.getElementById('queryDate').textContent = formatDateForDisplay(currentDate);
+        // Set up date input constraints
+        dateInput.max = yesterdayDate;
+        dateInput.value = yesterdayDate;
 
         // Elements
         const checkPriceBtn = document.getElementById('checkPriceBtn');
         const resultsContainer = document.getElementById('resultsContainer');
 
-        // Fetch average price from Dune API with date parameter
-        async function fetchAveragePrice() {
+        // Fetch price from Dune API with date parameter
+        async function fetchAveragePrice(selectedDate) {
             const DUNE_API_KEY = 'dqHEpHvOICY5sqX2getzqScyGjRBxooA';
             const QUERY_ID = '6620648'; // Parameterized query
             
@@ -455,7 +461,7 @@
                         },
                         body: JSON.stringify({
                             query_parameters: {
-                                date: currentDate + ' 00:00:00'
+                                date: selectedDate + ' 00:00:00'
                             }
                         })
                     }
@@ -500,26 +506,37 @@
                 
             } catch (error) {
                 console.error('Error fetching price:', error);
-                // Return fallback/demo data for January 30, 2026
+                // Return fallback/demo data
                 return {
                     price_demurrage: '0.012684140846512395',
-                    block_day: currentDate
+                    block_day: selectedDate
                 };
             }
         }
 
         // Check price button click
         checkPriceBtn.addEventListener('click', async function() {
+            const selectedDate = dateInput.value;
+            
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+            
             // Show loading
             checkPriceBtn.innerHTML = '<div class="spinner"></div> Loading...';
             checkPriceBtn.disabled = true;
 
             try {
-                // Fetch average price data
-                const priceData = await fetchAveragePrice();
+                // Fetch price data
+                const priceData = await fetchAveragePrice(selectedDate);
 
+                // Round to 2 significant digits
+                const price = parseFloat(priceData.price_demurrage);
+                const roundedPrice = roundToSignificantDigits(price, 2);
+                
                 // Update value
-                document.getElementById('avgPriceDemurrage').textContent = parseFloat(priceData.price_demurrage).toFixed(6);
+                document.getElementById('avgPriceDemurrage').textContent = roundedPrice.toString();
                 document.getElementById('monthInfo').textContent = formatDateForDisplay(priceData.block_day);
 
                 // Show results
